@@ -22,4 +22,51 @@ def show_menu():
     print("0. Exit")
 
 
+def main():
+
+    while True:
+        show_menu()
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            farm_app.add_crop()
+
+        elif choice == "2":
+            farm_app.record_harvest()
+
+        elif choice == "3":
+            farm_app.record_sale()
+
+        elif choice == "4":
+            farm_app.record_expense()
+
+        elif choice == "5":
+            farm_app.record_loss()
+
+        elif choice == "6":
+            farm_app.view_inventory()
+
+        elif choice == "7":
+            farm_app.view_financial_report()
+
+        elif choice == "8":
+            farm_app.view_history()
+
+        elif choice == "9":
+            farm_app.edit_or_delete_record()
+
+        elif choice == "10":
+            farm_app.search_transactions()
+
+        elif choice == "0":
+            print("Thank you for using FarmTrack. Goodbye!")
+            break
+
+        else:
+            print("Invalid choice! Please try again.")
+
+
+if __name__ == "__main__":
+    main()
 
