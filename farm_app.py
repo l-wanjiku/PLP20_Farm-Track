@@ -32,3 +32,45 @@ def _prompt_date(prompt_text):
             return raw
         except ValueError:
             print("Error: Date must be in YYYY-MM-DD format.")
+
+def record_harvest_flow():
+    """Handles CLI input, validation, and saving a harvest record."""
+    print("\n--- Record New Harvest ---")
+    crop_name = _prompt_non_empty("Crop name (e.g., Maize, Beans): ")
+    field_name = _prompt_non_empty("Field/Plot name: ")
+    quantity = _prompt_positive_float("Quantity harvested: ")
+    unit = input("Unit [default: kg]: ").strip() or "kg"
+    harvest_date = _prompt_date("Harvest date (YYYY-MM-DD) [default: today]: ")
+    notes = input("Notes (optional): ").strip()
+
+    try:
+        harvest_id = database.add_harvest(
+            crop_name=crop_name,
+            field_name=field_name,
+            quantity=quantity,
+            harvest_date=harvest_date,
+            unit=unit,
+            notes=notes,
+        )
+        print(f"Success: Harvest #{harvest_id} ({quantity} {unit} of {crop_name}) recorded.")
+    except Exception as exc:
+        print(f"Database error while recording harvest: {exc}")
+
+
+def view_harvests_flow():
+    """Displays all recorded harvests from the database."""
+    print("\n--- Harvest Records ---")
+    try:
+        harvests = database.get_all_harvests()
+        if not harvests:
+            print("No harvest records found.")
+            return
+
+        for row in harvests:
+            note_text = f" | Notes: {row['notes']}" if row.get("notes") else ""
+            print(
+                f"[{row['id']}] {row['harvest_date']} - {row['crop_name']} "
+                f"({row['quantity']} {row['unit']}) from {row['field_name']}{note_text}"
+            )
+    except Exception as exc:
+        print(f"Database error while fetching harvests: {exc}")
