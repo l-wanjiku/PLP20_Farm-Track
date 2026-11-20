@@ -67,3 +67,24 @@ def get_all_harvests():
     finally:
         cursor.close()
         conn.close()
+def create_sales_table():
+    '''Create the sales table if it does not exist yet (safe to run many times).'''
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS sales (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                crop_name VARCHAR(100) NOT NULL,
+                quantity DECIMAL(10, 2) NOT NULL CHECK (quantity > 0),
+                price_per_kg DECIMAL(10, 2) NOT NULL CHECK (price_per_kg > 0),
+                total_amount DECIMAL(12, 2) NOT NULL,
+                sale_date DATE NOT NULL
+            );
+            '''
+        )
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
