@@ -1,79 +1,197 @@
+
+import mysql.connector
+from database import (
+    add_sale,
+    crop_has_harvest,
+    create_sales_table,
+    get_available_stock,
+)
+
+
+def _sale_ask_text(prompt):
+    while True:
+        value = input(prompt).strip()
+        if value:
+            return value
+        print('Error: this field cannot be empty. Try again.')
+
+
+def _sale_ask_positive_number(prompt):
+    while True:
+        try:
+            value = float(input(prompt).strip())
+        except ValueError:
+            print('Error: please enter a number (e.g. 25 or 25.5).')
+            continue
+        if value <= 0:
+            print('Error: the number must be greater than 0.')
+            continue
+        return value
+
+
+
+def _sale_ask_date(prompt):
+    while True:
+        value = input(prompt).strip()
+        try:
+            datetime.strptime(value, '%Y-%m-%d')
+            return value
+        except ValueError:
+            print('Error: use this format YYYY-MM-DD (e.g. 2026-11-20).')
+
+
+
+def record_sale_flow():
+    '''Asks for the sale details, block overselling, save, show the revenue.'''
+    print()
+    print('--------- RECORD PRODUCE SALE ----------')
+    try:
+        create_sales_table()
+        crop = _sale_ask_text('Enter crop name: ')
+
+        if not crop_has_harvest(crop):
+            print(f'Error: no harvest found for {crop!r}. Record a harvest first.')
+            return
+
+        stock = get_available_stock(crop)
+        print(f'Available stock for {crop}: {stock:.2f} kg')
+        if stock <= 0:
+            print('Warning: this crop is out of stock. Sale not allowed.')
+            return
+
+        quantity = _sale_ask_positive_number('Enter quantity sold (kg): ')
+        if quantity > stock:
+            print(f'Warning: cannot sell {quantity:.2f} kg. Only {stock:.2f} kg in stock.')
+            return
+
+        price = _sale_ask_positive_number('Enter price per kg (RWF): ')
+        sale_date = _sale_ask_date('Enter sale date (YYYY-MM-DD): ')
+
+        total = add_sale(crop, quantity, price, sale_date)
+        print()
+        print('Sale recorded successfully!')
+        print(f'Total revenue: {total:,.2f} RWF')
+        print(f'Remaining stock: {stock - quantity:.2f} kg')
+
+    except ValueError as error:
+        print(f'Error: {error}')
+    except mysql.connector.Error as error:
+        print(f'Database error: {error}')
+    finally:
+        input('Press Enter to return to the main menu...')
+        origin/logic-sales
+
 from datetime import datetime
-from mysql.connector import Error as MySQLError
+import mysql.connector
+from database import (
+    add_expense,
+    add_loss,
+    create_expenses_table,
+    create_losses_table,
+)
 
 
-def _clean_text(value: str, name: str) -> str:
-    cleaned = value.strip()
-    if not cleaned:
-        raise ValueError(f"{name} cannot be blank.")
-    return cleaned
+def _expense_ask_text(prompt):
+    while True:
+        value = input(prompt).strip()
+        if value:
+            return value
+        print('Error: this field cannot be empty. Try again.')
 
 
-def _clean_positive_amount(raw: str, name: str) -> float:
-    amount = float(raw.strip())
-    if amount <= 0:
-        raise ValueError(f"{name} must be more than 0.")
-    return amount
+def _expense_ask_positive_number(prompt):
+    while True:
+        try:
+            value = float(input(prompt).strip())
+        except ValueError:
+            print('Error: please enter a number (e.g. 25 or 25.5).')
+            continue
+        if value <= 0:
+            print('Error: the number must be greater than 0.')
+            continue
+        return value
 
 
-def _clean_date_str(raw: str) -> str:
-    cleaned = raw.strip()
-    datetime.strptime(cleaned, "%Y-%m-%d")
-    return cleaned
+def _expense_ask_date(prompt):
+    while True:
+        value = input(prompt).strip()
+        try:
+            datetime.strptime(value, '%Y-%m-%d')
+            return value
+        except ValueError:
+            print('Error: use this format YYYY-MM-DD (e.g. 2026-11-20).')
 
 
-def record_expense_flow(is_input_purchase: bool = False, conn=None) -> None:
-    """Ask the farmer for input purchase or expense details (Options 2 & 7) and save them."""
-    title = "Record Farm Input Purchase" if is_input_purchase else "Record Farm Expense"
-    print(f"\n--- {title} ---")
+def record_expense_flow(is_input_purchase=False):
+    '''Asks for input purchase (Option 2) or general expense (Option 7) details and saves.'''
+    print()
+    if is_input_purchase:
+        print('--------- RECORD FARM INPUT PURCHASE ----------')
+    else:
+        print('--------- RECORD FARM EXPENSE ----------')
     try:
+        create_expenses_table()
         if is_input_purchase:
-            item = _clean_text(input("Input item (e.g., seeds, fertilizer): "), "Input item")
-            qty = _clean_positive_amount(input("Quantity: "), "Quantity")
-            unit = _clean_text(input("Unit (e.g., kg, bags): "), "Unit")
-            amount = _clean_positive_amount(input("Total cost in RWF: "), "Total cost")
-            date_str = _clean_date_str(input("Date (YYYY-MM-DD): "))
-            description = f"{qty:g} {unit} {item}"
+            item = _expense_ask_text('Enter input item (e.g., seeds, fertilizer): ')
+            qty = _expense_ask_positive_number('Enter quantity: ')
+            unit = _expense_ask_text('Enter unit (e.g., kg, bags): ')
+            amount = _expense_ask_positive_number('Enter total cost (RWF): ')
+            expense_date = _expense_ask_date('Enter purchase date (YYYY-MM-DD): ')
+            description = f'{qty:g} {unit} {item.title()}'
         else:
-            description = _clean_text(input("Expense description: "), "Expense description")
-            amount = _clean_positive_amount(input("Amount in RWF: "), "Amount")
-            date_str = _clean_date_str(input("Date (YYYY-MM-DD): "))
+            description = _expense_ask_text('Enter expense description: ')
+            amount = _expense_ask_positive_number('Enter amount (RWF): ')
+            expense_date = _expense_ask_date('Enter expense date (YYYY-MM-DD): ')
 
-        add_expense(description, amount, date_str, conn=conn)
-        print("Saved! Returning to menu.")
-    except ValueError as err:
-        print(f"Invalid input: {err}")
-    except MySQLError as err:
-        print(f"Could not save to MySQL database: {err}")
+        expense_id = add_expense(description, amount, expense_date)
+        print()
+        print('Expense recorded successfully!')
+        print(f'Record ID: {expense_id}')
+        print(f'Description: {description}')
+        print(f'Amount: {amount:,.2f} RWF')
+    except ValueError as error:
+        print(f'Error: {error}')
+    except mysql.connector.Error as error:
+        print(f'Database error: {error}')
+    finally:
+        input('Press Enter to return to the main menu...')
 
 
-def record_loss_flow(conn=None) -> None:
-    """Ask the farmer for produce loss details (Option 6) and save them."""
-    print("\n--- Record Produce Loss ---")
+def record_loss_flow():
+    '''Asks for produce loss details (Option 6) and saves to the losses table.'''
+    print()
+    print('--------- RECORD PRODUCE LOSS ----------')
     try:
-        crop = _clean_text(input("Crop name: "), "Crop name")
-        qty_lost = _clean_positive_amount(input("Quantity lost (kg): "), "Quantity lost")
-        reason = _clean_text(input("Reason for loss: "), "Reason")
-        date_str = _clean_date_str(input("Date (YYYY-MM-DD): "))
+        create_losses_table()
+        crop = _expense_ask_text('Enter crop name: ').title()
+        quantity_kg = _expense_ask_positive_number('Enter quantity lost (kg): ')
+        reason = _expense_ask_text('Enter reason for loss: ')
+        loss_date = _expense_ask_date('Enter loss date (YYYY-MM-DD): ')
 
-        add_loss(crop, qty_lost, reason, date_str, conn=conn)
-        print("Loss recorded! Returning to menu.")
-    except ValueError as err:
-        print(f"Invalid input: {err}")
-    except MySQLError as err:
-        print(f"Could not save to MySQL database: {err}")
+        loss_id = add_loss(crop, quantity_kg, reason, loss_date)
+        print()
+        print('Produce loss recorded successfully!')
+        print(f'Record ID: {loss_id}')
+        print(f'Crop: {crop}')
+        print(f'Quantity lost: {quantity_kg:.2f} kg')
+    except ValueError as error:
+        print(f'Error: {error}')
+    except mysql.connector.Error as error:
+        print(f'Database error: {error}')
+    finally:
+        input('Press Enter to return to the main menu...')
 
 
-def handle_expense_loss_option(choice: str, conn=None) -> bool:
-    """Handle menu options 2, 6, and 7. Returns True if handled."""
+def handle_expense_loss_option(choice):
+    '''Routes menu options 2, 6, and 7. Returns True if handled.'''
     pick = choice.strip()
-    if pick == "2":
-        record_expense_flow(is_input_purchase=True, conn=conn)
+    if pick == '2':
+        record_expense_flow(is_input_purchase=True)
         return True
-    if pick == "6":
-        record_loss_flow(conn=conn)
+    if pick == '6':
+        record_loss_flow()
         return True
-    if pick == "7":
-        record_expense_flow(is_input_purchase=False, conn=conn)
+    if pick == '7':
+        record_expense_flow(is_input_purchase=False)
         return True
     return False
