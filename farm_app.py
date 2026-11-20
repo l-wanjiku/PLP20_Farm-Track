@@ -1,57 +1,5 @@
-
-def record_expense_flow(db_path: str = "farmtrack.db", is_input_purchase: bool = False) -> None:
-    """Ask the farmer for input purchase or expense details (Options 2 & 7) and save them."""
-    pass
-
-
-def record_loss_flow(db_path: str = "farmtrack.db") -> None:
-    """Ask the farmer for produce loss details (Option 6) and save them."""
-    pass
-
 from datetime import datetime
-import sqlite3
-
-
-def record_expense_flow(db_path: str = "farmtrack.db", is_input_purchase: bool = False) -> None:
-    """Ask the farmer for input purchase or expense details (Options 2 & 7) and save them."""
-    title = "Record Farm Input Purchase" if is_input_purchase else "Record Farm Expense"
-    print(f"\n--- {title} ---")
-    try:
-        if is_input_purchase:
-            item = input("Input item (e.g., seeds, fertilizer): ").strip()
-            qty = float(input("Quantity: ").strip())
-            unit = input("Unit (e.g., kg, bags): ").strip()
-            amount = float(input("Total cost in RWF: ").strip())
-            date_str = input("Date (YYYY-MM-DD): ").strip()
-            description = f"{qty:g} {unit} {item}"
-        else:
-            description = input("Expense description: ").strip()
-            amount = float(input("Amount in RWF: ").strip())
-            date_str = input("Date (YYYY-MM-DD): ").strip()
-
-        add_expense(description, amount, date_str, db_path=db_path)
-        print("Saved! Returning to menu.")
-    except ValueError:
-        print("Please enter valid numbers for amounts/quantities.")
-    except sqlite3.Error as err:
-        print(f"Could not save to database: {err}")
-
-
-def record_loss_flow(db_path: str = "farmtrack.db") -> None:
-    """Ask the farmer for produce loss details (Option 6) and save them."""
-    print("\n--- Record Produce Loss ---")
-    try:
-        crop = input("Crop name: ").strip()
-        qty_lost = float(input("Quantity lost (kg): ").strip())
-        reason = input("Reason for loss: ").strip()
-        date_str = input("Date (YYYY-MM-DD): ").strip()
-
-        add_loss(crop, qty_lost, reason, date_str, db_path=db_path)
-        print("Loss recorded! Returning to menu.")
-    except ValueError:
-        print("Please enter a valid number for the weight lost.")
-    except sqlite3.Error as err:
-        print(f"Could not save to database: {err}")
+from mysql.connector import Error as MySQLError
 
 
 def _clean_text(value: str, name: str) -> str:
@@ -74,16 +22,58 @@ def _clean_date_str(raw: str) -> str:
     return cleaned
 
 
-def handle_expense_loss_option(choice: str, db_path: str = "farmtrack.db") -> bool:
+def record_expense_flow(is_input_purchase: bool = False, conn=None) -> None:
+    """Ask the farmer for input purchase or expense details (Options 2 & 7) and save them."""
+    title = "Record Farm Input Purchase" if is_input_purchase else "Record Farm Expense"
+    print(f"\n--- {title} ---")
+    try:
+        if is_input_purchase:
+            item = _clean_text(input("Input item (e.g., seeds, fertilizer): "), "Input item")
+            qty = _clean_positive_amount(input("Quantity: "), "Quantity")
+            unit = _clean_text(input("Unit (e.g., kg, bags): "), "Unit")
+            amount = _clean_positive_amount(input("Total cost in RWF: "), "Total cost")
+            date_str = _clean_date_str(input("Date (YYYY-MM-DD): "))
+            description = f"{qty:g} {unit} {item}"
+        else:
+            description = _clean_text(input("Expense description: "), "Expense description")
+            amount = _clean_positive_amount(input("Amount in RWF: "), "Amount")
+            date_str = _clean_date_str(input("Date (YYYY-MM-DD): "))
+
+        add_expense(description, amount, date_str, conn=conn)
+        print("Saved! Returning to menu.")
+    except ValueError as err:
+        print(f"Invalid input: {err}")
+    except MySQLError as err:
+        print(f"Could not save to MySQL database: {err}")
+
+
+def record_loss_flow(conn=None) -> None:
+    """Ask the farmer for produce loss details (Option 6) and save them."""
+    print("\n--- Record Produce Loss ---")
+    try:
+        crop = _clean_text(input("Crop name: "), "Crop name")
+        qty_lost = _clean_positive_amount(input("Quantity lost (kg): "), "Quantity lost")
+        reason = _clean_text(input("Reason for loss: "), "Reason")
+        date_str = _clean_date_str(input("Date (YYYY-MM-DD): "))
+
+        add_loss(crop, qty_lost, reason, date_str, conn=conn)
+        print("Loss recorded! Returning to menu.")
+    except ValueError as err:
+        print(f"Invalid input: {err}")
+    except MySQLError as err:
+        print(f"Could not save to MySQL database: {err}")
+
+
+def handle_expense_loss_option(choice: str, conn=None) -> bool:
     """Handle menu options 2, 6, and 7. Returns True if handled."""
     pick = choice.strip()
     if pick == "2":
-        record_expense_flow(db_path=db_path, is_input_purchase=True)
+        record_expense_flow(is_input_purchase=True, conn=conn)
         return True
     if pick == "6":
-        record_loss_flow(db_path=db_path)
+        record_loss_flow(conn=conn)
         return True
     if pick == "7":
-        record_expense_flow(db_path=db_path, is_input_purchase=False)
+        record_expense_flow(is_input_purchase=False, conn=conn)
         return True
     return False
