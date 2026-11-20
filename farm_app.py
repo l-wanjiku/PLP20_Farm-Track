@@ -1,4 +1,3 @@
-Add-Content farm_app.py @'
 
 # ---------- REPORTS (Sonia, branch logic-reports) ----------
 import mysql.connector
@@ -20,4 +19,3 @@ def view_inventory_flow():
 
     for crop, harvested, sold, lost, stock in inventory:
         print(f"{crop}: {stock} kg left (harvested {harvested}, sold {sold}, lost {lost})")
-'@
