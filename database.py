@@ -88,3 +88,12 @@ def create_sales_table():
     finally:
         cursor.close()
         conn.close()
+
+def _sum_quantity(cursor, table, crop_name):
+    ''' add up to the quantity or kg in one table and returns float'''
+    cursor.execute(
+        f'SELECT COALESCE(SUM(quantity), 0) FROM {table} '
+        'WHERE LOWER(crop_name) = LOWER(%s);',
+        (crop_name,),
+    )
+    return float(cursor.fetchone()[0])
