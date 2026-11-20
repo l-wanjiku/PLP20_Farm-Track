@@ -27,3 +27,14 @@ def _sale_ask_positive_number(prompt):
             print('Error: the number must be greater than 0.')
             continue
         return value
+
+
+
+def _sale_ask_date(prompt):
+    while True:
+        value = input(prompt).strip()
+        try:
+            datetime.strptime(value, '%Y-%m-%d')
+            return value
+        except ValueError:
+            print('Error: use this format YYYY-MM-DD (e.g. 2026-11-20).')
