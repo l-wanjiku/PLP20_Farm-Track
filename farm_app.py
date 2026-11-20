@@ -60,3 +60,29 @@ def handle_view_harvests():
             f"[{row['id']}] {row['harvest_date']} | {row['crop_name']} "
             f"({row['field_name']}): {row['quantity']} {row['unit']}{notes_part}"
         )
+
+def handle_view_summary():
+    summary = database.get_harvest_summary_by_crop()
+    if not summary:
+        print("No harvest data available for summary.")
+        return
+
+    print("\n--- Harvest Summary by Crop ---")
+    for item in summary:
+        print(
+            f"{item['crop_name']}: {item['total_quantity']} {item['unit']} "
+            f"({item['record_count']} entries)"
+        )
+
+
+def handle_delete_harvest():
+    raw_id = input("Enter harvest ID to delete: ").strip()
+    if not raw_id.isdigit():
+        print("Please enter a valid numeric ID.")
+        return
+
+    deleted = database.delete_harvest(int(raw_id))
+    if deleted:
+        print(f"Harvest record #{raw_id} deleted.")
+    else:
+        print(f"No harvest record found with ID #{raw_id}.")
