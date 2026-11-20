@@ -74,3 +74,20 @@ def view_harvests_flow():
             )
     except Exception as exc:
         print(f"Database error while fetching harvests: {exc}")
+
+if __name__ == "__main__":
+    database.init_db()
+    while True:
+        print("\n=== Harvest Module Test ===")
+        print("1. Record Harvest")
+        print("2. View Harvests")
+        print("0. Exit")
+        choice = input("Select an option: ").strip()
+        if choice == "1":
+            record_harvest_flow()
+        elif choice == "2":
+            view_harvests_flow()
+        elif choice == "0":
+            break
+        else:
+            print("Invalid option.")
