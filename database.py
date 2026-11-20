@@ -97,3 +97,20 @@ def _sum_quantity(cursor, table, crop_name):
         (crop_name,),
     )
     return float(cursor.fetchone()[0])
+
+def _sum_losses(cursor, crop_name):
+    '''Kg lost for a crop. If the losses table does not exist yet, return 0.'''
+    try:
+        return _sum_quantity(cursor, 'losses', crop_name)
+    except mysql.connector.ProgrammingError:
+        return 0.0
+
+def crop_has_harvest(crop_name):
+    '''it checks if crop was harvested atleast once'''
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        return _sum_quantity(cursor, 'harvests', crop_name) > 0
+    finally:
+        cursor.close()
+        conn.close()
