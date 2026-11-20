@@ -38,3 +38,21 @@ def view_financial_summary_flow():
     print(f"Total expenses: {expenses:,.0f} RWF")
     print(f"Net {label}:     {abs(net):,.0f} RWF")
 
+
+
+def view_transaction_history_flow():
+    """Option 10: show all transactions, newest first."""
+    print("\n--------------- TRANSACTION HISTORY ---------------\n")
+    try:
+        records = get_transaction_history()
+    except mysql.connector.Error as error:
+        print(f"Could not read the transaction history: {error}")
+        return
+
+    if not records:
+        print("No transactions recorded yet.")
+        return
+
+    for date, kind, details in records:
+        print(f"{date} | {kind:<8} | {details}")
+
