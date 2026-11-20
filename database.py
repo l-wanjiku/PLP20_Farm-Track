@@ -114,3 +114,47 @@ def crop_has_harvest(crop_name):
     finally:
         cursor.close()
         conn.close()
+
+
+def get_available_stock(crop_name):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        harvested = _sum_quantity(cursor, 'harvests', crop_name)
+        sold = _sum_quantity(cursor, 'sales', crop_name)
+        lost = _sum_losses(cursor, crop_name)
+        return harvested - sold - lost
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+def add_sale(crop_name, quantity, price_per_kg, sale_date):
+    '''It saves a sale, it also raises valueerror when there is no crop harvest or qty is above stock'''
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        harvested = _sum_quantity(cursor, 'harvests', crop_name)
+        if harvested == 0:
+            raise ValueError(f'No harvest recorded for {crop_name!r}.')
+        stock = (harvested
+                 - _sum_quantity(cursor, 'sales', crop_name)
+                 - _sum_losses(cursor, crop_name))
+        if quantity > stock:
+            raise ValueError(
+                f'Not enough stock. Available: {stock} kg, requested: {quantity} kg.'
+            )
+        total = round(quantity * price_per_kg, 2)
+        cursor.execute(
+            '''
+            INSERT INTO sales (crop_name, quantity, price_per_kg, total_amount, sale_date)
+            VALUES (%s, %s, %s, %s, %s);
+            ''',
+            (crop_name.strip().title(), quantity, price_per_kg, total, sale_date),
+        )
+        conn.commit()
+        return total
+    finally:
+        cursor.close()
+        conn.close()
