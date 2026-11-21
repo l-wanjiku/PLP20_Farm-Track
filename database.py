@@ -67,3 +67,94 @@ def get_all_harvests():
     finally:
         cursor.close()
         conn.close()
+def create_sales_table():
+    '''Create the sales table if it does not exist yet (safe to run many times).'''
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS sales (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                crop_name VARCHAR(100) NOT NULL,
+                quantity DECIMAL(10, 2) NOT NULL CHECK (quantity > 0),
+                price_per_kg DECIMAL(10, 2) NOT NULL CHECK (price_per_kg > 0),
+                total_amount DECIMAL(12, 2) NOT NULL,
+                sale_date DATE NOT NULL
+            );
+            '''
+        )
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+def _sum_quantity(cursor, table, crop_name):
+    ''' add up to the quantity or kg in one table and returns float'''
+    cursor.execute(
+        f'SELECT COALESCE(SUM(quantity), 0) FROM {table} '
+        'WHERE LOWER(crop_name) = LOWER(%s);',
+        (crop_name,),
+    )
+    return float(cursor.fetchone()[0])
+
+def _sum_losses(cursor, crop_name):
+    '''Kg lost for a crop. If the losses table does not exist yet, return 0.'''
+    try:
+        return _sum_quantity(cursor, 'losses', crop_name)
+    except mysql.connector.ProgrammingError:
+        return 0.0
+
+def crop_has_harvest(crop_name):
+    '''it checks if crop was harvested atleast once'''
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        return _sum_quantity(cursor, 'harvests', crop_name) > 0
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_available_stock(crop_name):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        harvested = _sum_quantity(cursor, 'harvests', crop_name)
+        sold = _sum_quantity(cursor, 'sales', crop_name)
+        lost = _sum_losses(cursor, crop_name)
+        return harvested - sold - lost
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+def add_sale(crop_name, quantity, price_per_kg, sale_date):
+    '''It saves a sale, it also raises valueerror when there is no crop harvest or qty is above stock'''
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        harvested = _sum_quantity(cursor, 'harvests', crop_name)
+        if harvested == 0:
+            raise ValueError(f'No harvest recorded for {crop_name!r}.')
+        stock = (harvested
+                 - _sum_quantity(cursor, 'sales', crop_name)
+                 - _sum_losses(cursor, crop_name))
+        if quantity > stock:
+            raise ValueError(
+                f'Not enough stock. Available: {stock} kg, requested: {quantity} kg.'
+            )
+        total = round(quantity * price_per_kg, 2)
+        cursor.execute(
+            '''
+            INSERT INTO sales (crop_name, quantity, price_per_kg, total_amount, sale_date)
+            VALUES (%s, %s, %s, %s, %s);
+            ''',
+            (crop_name.strip().title(), quantity, price_per_kg, total, sale_date),
+        )
+        conn.commit()
+        return total
+    finally:
+        cursor.close()
+        conn.close()
