@@ -39,6 +39,10 @@ def init_db():
             cursor.close()
         conn.close()
 
+    create_sales_table()
+    create_expenses_table()
+    create_losses_table()
+
 
 def add_harvest(crop_name, field_name, quantity, harvest_date, unit="kg", notes=""):
     conn = get_connection()
