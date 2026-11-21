@@ -10,6 +10,9 @@ from database import (
     create_sales_table,
     crop_has_harvest,
     get_available_stock,
+    get_crop_inventory,
+    get_financial_summary,
+    get_transaction_history,
 )
 
 
@@ -285,3 +288,54 @@ def handle_expense_loss_option(choice):
         record_expense_flow(is_input_purchase=False)
         return True
     return False
+
+
+# Report menu functions
+
+def view_inventory_flow():
+    """Option 8: show the current stock for each crop."""
+    print("\n--------------- CURRENT INVENTORY ---------------\n")
+    try:
+        inventory = get_crop_inventory()
+    except mysql.connector.Error as error:
+        print(f"Could not read the inventory: {error}")
+        return
+
+    if not inventory:
+        print("No harvests recorded yet.")
+        return
+
+    for crop, harvested, sold, lost, stock in inventory:
+        print(f"{crop}: {stock:.2f} kg left (harvested {harvested:.2f}, sold {sold:.2f}, lost {lost:.2f})")
+
+
+def view_financial_summary_flow():
+    """Option 9: show revenue, expenses and net profit/loss."""
+    print("\n--------------- FARM SUMMARY ---------------\n")
+    try:
+        revenue, expenses, net = get_financial_summary()
+    except mysql.connector.Error as error:
+        print(f"Could not read the farm summary: {error}")
+        return
+
+    label = "PROFIT" if net >= 0 else "LOSS"
+    print(f"Total revenue:  {revenue:,.0f} RWF")
+    print(f"Total expenses: {expenses:,.0f} RWF")
+    print(f"Net {label}:     {abs(net):,.0f} RWF")
+
+
+def view_transaction_history_flow():
+    """Option 10: show all transactions, newest first."""
+    print("\n--------------- TRANSACTION HISTORY ---------------\n")
+    try:
+        records = get_transaction_history()
+    except mysql.connector.Error as error:
+        print(f"Could not read the transaction history: {error}")
+        return
+
+    if not records:
+        print("No transactions recorded yet.")
+        return
+
+    for date, kind, details in records:
+        print(f"{date} | {kind:<8} | {details}")
