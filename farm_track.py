@@ -1,5 +1,4 @@
-
-# FarmTrack CLI - Main Menu
+#Farm Track Main Menugit
 
 import farm_app
 
@@ -9,7 +8,7 @@ def show_menu():
     print("===============================")
     print("1. Add a crop")
     print("2. Record a harvest")
-    print("3. REcord a sale")
+    print("3. Record a sale")
     print("4. Record an expense")
     print("5. Record produce loss")
     print("6. View current inventory"),
@@ -51,8 +50,12 @@ def main():
             farm_app.edit_or_delete_record()
 
         elif choice =="10":
+            farm_app.Search_transactions_by_crop()
+
+        elif choice == "0":
             print("Thank you for using FarmTrack. Goodbye!")
             break
+        
         else:
             print("Invalid choice! Please try again.")
 
