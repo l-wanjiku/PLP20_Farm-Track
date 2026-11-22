@@ -9,7 +9,7 @@ def get_connection():
         host=os.getenv("DB_HOST", "localhost"),
         port=int(os.getenv("DB_PORT", "3306")),
         user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
+        password=os.getenv("DB_PASSWORD", "Mary123."),
         database=os.getenv("DB_NAME", "farmtrack_db"),
         ssl_disabled=os.getenv("DB_SSL_DISABLED", "true").lower() == "true",
     )
