@@ -57,3 +57,39 @@ python farm_track.py
 
 The tables (harvests, sales, expenses, losses) are created automatically the first time you run it.
 
+## How stock and profit are worked out
+
+- Stock = harvested - sold - lost
+- Profit = total revenue from sales - total expenses
+
+## Example
+
+Option 8 shows the stock of each crop like this:
+
+```
+Maize: 50.00 kg left (harvested 100.00, sold 40.00, lost 10.00)
+```
+
+Option 9 shows the money summary like this:
+
+```
+Total revenue:  60,000 RWF
+Total expenses: 25,000 RWF
+Net PROFIT:     35,000 RWF
+```
+
+The numbers above are only an example.
+
+## Files
+
+- `farm_track.py` - the main menu
+- `farm_app.py` - the screens and questions for each option
+- `database.py` - saves and reads data in MySQL
+
+## Team
+
+- Lewis Wanjiku - database setup and recording harvests
+- Emelyne Ikuzwe - recording sales and the stock check
+- Joan Salbei - expenses, farm inputs and produce losses
+- Sonia Isimbi - inventory, farm summary and transaction history (options 8, 9 and 10)
+- Maryann Nderitu - main menu, repository setup and README
