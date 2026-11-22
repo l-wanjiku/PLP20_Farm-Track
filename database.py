@@ -2,20 +2,51 @@ import os
 import mysql.connector
 
 
+def _load_env_file():
+    """Load key=value pairs from a local .env file if present."""
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if not os.path.isfile(env_path):
+        return
+    with open(env_path, "r", encoding="utf-8") as env_file:
+        for line in env_file:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file()
+
+
 # Database connection and harvest functions
 
-def get_connection():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", "3306")),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", "Mary123."),
-        database=os.getenv("DB_NAME", "farmtrack_db"),
-        ssl_disabled=os.getenv("DB_SSL_DISABLED", "true").lower() == "true",
-    )
+def get_connection(include_database=True):
+    kwargs = {
+        "host": os.getenv("DB_HOST", "localhost"),
+        "port": int(os.getenv("DB_PORT", "3306")),
+        "user": os.getenv("DB_USER", "root"),
+        "password": os.getenv("DB_PASSWORD", ""),
+        "ssl_disabled": os.getenv("DB_SSL_DISABLED", "true").lower() == "true",
+    }
+    if include_database:
+        kwargs["database"] = os.getenv("DB_NAME", "farmtrack_db")
+    return mysql.connector.connect(**kwargs)
 
 
 def init_db():
+    db_name = os.getenv("DB_NAME", "farmtrack_db").replace("`", "")
+    server_conn = get_connection(include_database=False)
+    server_cursor = None
+    try:
+        server_cursor = server_conn.cursor()
+        server_cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`;")
+        server_conn.commit()
+    finally:
+        if server_cursor is not None:
+            server_cursor.close()
+        server_conn.close()
+
     conn = get_connection()
     cursor = None
     try:
@@ -39,9 +70,57 @@ def init_db():
             cursor.close()
         conn.close()
 
+    create_plantings_table()
     create_sales_table()
     create_expenses_table()
     create_losses_table()
+
+
+def create_plantings_table():
+    """Create the plantings table if it does not exist yet (safe to run many times)."""
+    conn = get_connection()
+    cursor = None
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS plantings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                crop_name VARCHAR(100) NOT NULL,
+                field_name VARCHAR(100) NOT NULL,
+                quantity_planted DECIMAL(10, 2) NOT NULL CHECK (quantity_planted > 0),
+                unit VARCHAR(20) NOT NULL DEFAULT 'kg',
+                planting_date DATE NOT NULL,
+                notes TEXT
+            );
+            """
+        )
+        conn.commit()
+    finally:
+        if cursor is not None:
+            cursor.close()
+        conn.close()
+
+
+def add_planting(crop_name, field_name, quantity_planted, planting_date, unit="kg", notes=""):
+    """Save a planting record in plantings and return its ID."""
+    conn = get_connection()
+    cursor = None
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO plantings (crop_name, field_name, quantity_planted, unit, planting_date, notes)
+            VALUES (%s, %s, %s, %s, %s, %s);
+            """,
+            (crop_name.strip().title(), field_name.strip(), quantity_planted, unit.strip(), planting_date, notes),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        if cursor is not None:
+            cursor.close()
+        conn.close()
 
 
 def add_harvest(crop_name, field_name, quantity, harvest_date, unit="kg", notes=""):
@@ -374,6 +453,10 @@ def get_transaction_history():
         cursor.execute(
             """
             SELECT tx_date, tx_type, details FROM (
+                SELECT planting_date AS tx_date, 'PLANTING' AS tx_type,
+                       CONCAT(crop_name, ' - ', quantity_planted, ' ', unit, ' in ', field_name) AS details
+                FROM plantings
+                UNION ALL
                 SELECT harvest_date AS tx_date, 'HARVEST' AS tx_type,
                        CONCAT(crop_name, ' - ', quantity, ' kg') AS details
                 FROM harvests

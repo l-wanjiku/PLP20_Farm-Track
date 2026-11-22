@@ -50,6 +50,38 @@ def _prompt_date(prompt_text):
             print("Error: Date must be in YYYY-MM-DD format.")
 
 
+def record_planting_flow():
+    """Option 3: ask for planting details and save to the plantings table."""
+    print("\n--------- RECORD PLANTING ----------")
+    try:
+        database.create_plantings_table()
+        crop_name = _prompt_non_empty("Crop name (e.g., Maize, Beans): ")
+        field_name = _prompt_non_empty("Field/Plot name: ")
+        quantity_planted = _prompt_positive_float("Quantity/Seed planted: ")
+        unit = input("Unit [default: kg]: ").strip() or "kg"
+        planting_date = _prompt_date("Planting date (YYYY-MM-DD) [default: today]: ")
+        notes = input("Notes (optional): ").strip()
+
+        planting_id = database.add_planting(
+            crop_name=crop_name,
+            field_name=field_name,
+            quantity_planted=quantity_planted,
+            planting_date=planting_date,
+            unit=unit,
+            notes=notes,
+        )
+        print()
+        print("Planting recorded successfully!")
+        print(f"Record ID: {planting_id}")
+        print(f"Crop: {crop_name.strip().title()} ({quantity_planted} {unit}) in {field_name}")
+    except ValueError as error:
+        print(f"Error: {error}")
+    except mysql.connector.Error as error:
+        print(f"Database error: {error}")
+    finally:
+        input("Press Enter to return to the main menu...")
+
+
 def record_harvest_flow():
     """Handles CLI input, validation, and saving a harvest record."""
     print("\n--- Record New Harvest ---")
