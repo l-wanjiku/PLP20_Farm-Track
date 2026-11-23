@@ -18,12 +18,21 @@ from database import (
 
 # Harvest menu functions
 
-def _prompt_non_empty(prompt_text):
+def _ask_valid_text(prompt_text):
+    """Prompt until the user enters non-empty text containing at least one letter."""
     while True:
         value = input(prompt_text).strip()
-        if value:
-            return value
-        print("Error: This field cannot be empty.")
+        if not value:
+            print("Error: this field cannot be empty. Try again.")
+            continue
+        if not any(ch.isalpha() for ch in value):
+            print("Error: please enter valid text (cannot be numbers or symbols only).")
+            continue
+        return value
+
+
+def _prompt_non_empty(prompt_text):
+    return _ask_valid_text(prompt_text)
 
 
 def _prompt_positive_float(prompt_text):
@@ -128,11 +137,7 @@ def view_harvests_flow():
 # Sales menu functions
 
 def _sale_ask_text(prompt):
-    while True:
-        value = input(prompt).strip()
-        if value:
-            return value
-        print("Error: this field cannot be empty. Try again.")
+    return _ask_valid_text(prompt)
 
 
 def _sale_ask_positive_number(prompt):
@@ -201,11 +206,7 @@ def record_sale_flow():
 # Expenses and losses menu functions
 
 def _expense_ask_text(prompt):
-    while True:
-        value = input(prompt).strip()
-        if value:
-            return value
-        print("Error: this field cannot be empty. Try again.")
+    return _ask_valid_text(prompt)
 
 
 def _expense_ask_positive_number(prompt):
